@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#070b14" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23070b14'/%3E%3Ctext x='32' y='45' font-size='36' font-family='monospace' font-weight='bold' text-anchor='middle' fill='%2358e8ff'%3E07%3C/text%3E%3C/svg%3E" />
+  <title>DUEL ARENA — Jev 手枪对决</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene"></canvas>
+
+    <!-- ============ HUD ============ -->
+    <div id="hud" class="hud hidden">
+      <!-- top: score -->
+      <div class="scoreboard">
+        <div class="score-side score-human">
+          <span class="score-label">YOU</span>
+          <span class="score-value" id="score-player">0</span>
+        </div>
+        <div class="score-center">
+          <div class="score-round" id="round-label">ROUND 1</div>
+          <div class="score-dashes"><i></i><i></i><i></i></div>
+        </div>
+        <div class="score-side score-bot">
+          <span class="score-value" id="score-bot">0</span>
+          <span class="score-label">JEV-01</span>
+        </div>
+      </div>
+
+      <!-- left: player vitals -->
+      <div class="vitals vitals-player">
+        <div class="vitals-head"><span class="tag">PLAYER</span><span id="hp-player-text">100</span></div>
+        <div class="bar"><div class="bar-fill hp-fill" id="hp-player"></div></div>
+      </div>
+
+      <!-- right: bot vitals -->
+      <div class="vitals vitals-bot">
+        <div class="vitals-head"><span id="hp-bot-text">100</span><span class="tag">JEV-01</span></div>
+        <div class="bar bot-bar"><div class="bar-fill bot-hp-fill" id="hp-bot"></div></div>
+      </div>
+
+      <!-- right: brain panel -->
+      <div class="brain-panel" id="brain-panel">
+        <div class="brain-head">
+          <span class="brain-title">JEV · THINKING</span>
+          <span class="brain-source" id="brain-source">LOCAL</span>
+        </div>
+        <div class="brain-row"><span>aiming at me</span><b id="think-aim">—</b></div>
+        <div class="brain-row"><span>threat level</span><b id="think-threat">—</b></div>
+        <div class="brain-row"><span>fire?</span><b id="think-fire">—</b></div>
+        <div class="brain-row"><span>next move</span><b id="think-move">—</b></div>
+        <div class="brain-thought" id="think-taunt">…</div>
+        <div class="brain-meter"><i id="brain-meter-fill"></i></div>
+      </div>
+
+      <!-- center: crosshair -->
+      <div class="crosshair" id="crosshair">
+        <i class="ch ch-t"></i><i class="ch ch-b"></i>
+        <i class="ch ch-l"></i><i class="ch ch-r"></i>
+        <i class="ch-dot"></i>
+        <div class="hitmarker" id="hitmarker"><i></i><i></i><i></i><i></i></div>
+      </div>
+
+      <!-- damage vignette -->
+      <div class="damage-flash" id="damage-flash"></div>
+
+      <!-- bottom: ammo + hint -->
+      <div class="ammo" id="ammo">
+        <span class="ammo-current" id="ammo-current">7</span>
+        <span class="ammo-sep">/</span>
+        <span class="ammo-cap">7</span>
+        <span class="ammo-label" id="ammo-label">PISTOL</span>
+      </div>
+      <div class="controls-hint" id="controls-hint">A / D 平移 · 鼠标瞄准 · 左键射击 · R 换弹</div>
+
+      <!-- subtitle -->
+      <div class="subtitle" id="subtitle"></div>
+
+      <!-- center announcements -->
+      <div class="announce" id="announce"></div>
+    </div>
+
+    <!-- ============ START / PAUSE OVERLAY ============ -->
+    <div class="overlay" id="overlay">
+      <div class="overlay-card">
+        <div class="brand-kicker">TYPESAFE SYSTEM ONE PRESENTS</div>
+        <h1 class="brand">DUEL <span>ARENA</span></h1>
+        <p class="tagline">一场手枪对决。你不能前进，也不能后退。<br />只有你和一台会思考的机器人。</p>
+        <div class="rules">
+          <div class="rule"><b>01</b><span>只能左右平移</span></div>
+          <div class="rule"><b>02</b><span>鼠标瞄准 · 左键开火</span></div>
+          <div class="rule"><b>03</b><span>三局两胜 · 爆头伤害更高</span></div>
+        </div>
+        <button class="start-btn" id="start-btn"><span>ENTER THE ARENA</span><i>↗</i></button>
+        <div class="start-note" id="start-note">点击进入后鼠标将被锁定 · ESC 释放</div>
+      </div>
+      <div class="overlay-corner tl">ARENA 07 / NIGHT MATCH</div>
+      <div class="overlay-corner br">POWERED BY JEV</div>
+    </div>
+
+    <div class="loading" id="loading"><div class="loading-ring"></div><span>LOADING ARENA</span></div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
