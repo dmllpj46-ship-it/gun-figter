@@ -93,14 +93,17 @@ gun-figter/
 ## 5. 里程碑
 
 - [x] M0 分析 + 三份文档
-- [ ] M1 工程骨架（Vite + Three.js 跑通空白场景）
-- [ ] M2 竞技场（地面/看台/观众/鲜花/灯光）
-- [ ] M3 玩家控制 + 射击手感
-- [ ] M4 机器人 + Jev 大脑 + 降级
-- [ ] M5 HUD / 音效 / 回合
-- [ ] M6 本地自测与调优（截图验证画面、模拟键鼠验证操控）
-- [ ] M7 GitHub public 仓库
-- [ ] M8 Cloudflare Pages 部署 + 线上验证
+- [x] M1 工程骨架（Vite + Three.js 跑通空白场景）
+- [x] M2 竞技场（地面/看台/观众/鲜花/灯光）
+- [x] M3 玩家控制 + 射击手感
+- [x] M4 机器人 + Jev 大脑 + 降级
+- [x] M5 HUD / 音效 / 回合
+- [x] M6 本地自测与调优（截图验证画面、模拟键鼠验证操控）
+- [x] M7 GitHub public 仓库
+- [x] M8 Cloudflare Pages 部署 + 线上验证
+
+线上地址：https://duel-arena.pages.dev
+仓库：https://github.com/dmllpj46-ship-it/gun-figter
 
 ## 6. 风险与对策
 

@@ -63,6 +63,7 @@ function resetRound() {
   state.phase = 'playing';
   state.paused = false;
   brain.reset();
+  brain.ask(buildBrainState()); // warm up the Pages Function before the first official thought
   combat.clearPetals();
   hud.setPlayerHP(100);
   hud.setBotHP(100);

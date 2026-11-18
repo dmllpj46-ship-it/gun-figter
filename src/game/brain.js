@@ -5,7 +5,7 @@ const ENDPOINT = '/api/jev';
 
 const THINK_MIN = 1.6;
 const THINK_MAX = 2.6;
-const TIMEOUT_MS = 4200;
+const TIMEOUT_MS = 7500; // Pages Functions cold starts can be slow on the first call
 
 const MOVE_TARGETS = {
   mirror_player: 'mirror',
@@ -148,8 +148,8 @@ export class Brain {
       if (this.onJevUpdate) this.onJevUpdate(this);
     } catch (err) {
       this.failures++;
-      this.source = 'LOCAL';
       this._heuristic(state);
+      if (this.failures >= 2) this.source = 'LOCAL';
       if (this.onJevUpdate) this.onJevUpdate(this);
     } finally {
       this.inFlight = false;

@@ -3,7 +3,8 @@
 浏览器里的第一人称手枪对决：你 vs 一台由 **Jev（TypeSafe System One 模型）** 驱动的人形机器人。
 场地是夜场竞技擂台，看台上坐满观众，台边堆着花束，赢了会被扔花。
 
-**在线试玩**：（部署后填入）
+**在线试玩**：https://duel-arena.pages.dev
+**源码**：https://github.com/dmllpj46-ship-it/gun-figter
 
 ---
 
