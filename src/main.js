@@ -39,7 +39,10 @@ const state = {
   botAmmo: 7,
   botReload: 0,
   botCooldown: 0.8,
+  botWinding: 0,
   lastMoveMode: null,
+  moveTargetX: 0,
+  breakSide: -1,
   shotTimes: [],
   playerHitAt: -99,
   robotHitAt: -99,
@@ -55,7 +58,10 @@ function resetRound() {
   state.botAmmo = 7;
   state.botReload = 0;
   state.botCooldown = 1.1;
+  state.botWinding = 0;
   state.lastMoveMode = null;
+  state.moveTargetX = 0;
+  state.breakSide = -1;
   state.shotTimes.length = 0;
   state.playerHitAt = -99;
   state.robotHitAt = -99;
@@ -146,7 +152,7 @@ function buildBrainState() {
       hp: player.hpCurrent,
     },
     robot: {
-      x: robot.x, hp: robot.hp, ammo: state.botAmmo,
+      x: robot.x, vx: robot.velocity, hp: robot.hp, ammo: state.botAmmo,
       sinceHit: state.time - state.robotHitAt,
     },
   };
@@ -164,29 +170,58 @@ function updateBot(dt, bstate) {
     audio.reload();
   }
 
-  // movement: mode changes produce a new target; mirror keeps tracking
+  // Movement: keep a live target and re-issue it on arrival. Setting only once
+  // per mode change made the robot walk to a point and then stand still forever.
   const mode = brain.action.moveMode;
-  if (mode !== state.lastMoveMode || mode === 'mirror') {
-    const x = robot.x;
+  const target = state.moveTargetX ?? robot.x;
+  const arrived = Math.abs(robot.x - target) < 0.4;
+  if (mode !== state.lastMoveMode || arrived || mode === 'mirror') {
+    let next = target;
     switch (mode) {
-      case 'mirror': robot.setMoveTarget(player.x); break;
-      case 'break': robot.setMoveTarget(player.x > 0 ? -5.6 : 5.6); break;
-      case 'left': robot.setMoveTarget(Math.max(-6.3, x - 3.1)); break;
-      case 'right': robot.setMoveTarget(Math.min(6.3, x + 3.1)); break;
-      default: robot.setMoveTarget(x);
+      case 'mirror':
+        next = player.x;
+        break;
+      case 'break':
+        // Patrol between both far lanes instead of parking on one side.
+        next = state.breakSide < 0 ? 5.6 : -5.6;
+        state.breakSide *= -1;
+        break;
+      case 'left':
+        next = robot.x - (2.4 + Math.random() * 1.5);
+        if (next < -6.1) next = robot.x + 3.0; // bounce off the edge
+        break;
+      case 'right':
+        next = robot.x + (2.4 + Math.random() * 1.5);
+        if (next > 6.1) next = robot.x - 3.0;
+        break;
+      default:
+        next = robot.x;
     }
+    state.moveTargetX = THREE.MathUtils.clamp(next, -6.3, 6.3);
+    robot.setMoveTarget(state.moveTargetX);
     state.lastMoveMode = mode;
   }
 
   robot.aimAt(player.x);
 
-  // firing cadence
+  // Firing: aim tell -> shot. The animation is visible before the tracer.
   state.botCooldown = Math.max(0, state.botCooldown - dt);
-  if (brain.action.fire && state.botAmmo > 0 && state.botReload <= 0 && state.botCooldown <= 0 && player.hpCurrent > 0) {
-    combat.botFire(brain.action.accuracy);
-    state.botAmmo--;
-    state.botCooldown = 0.42 + Math.random() * 0.22;
-    if (state.botAmmo === 0) state.botReload = 1.5;
+  const wantsFire = brain.action.fire && state.botAmmo > 0
+    && state.botReload <= 0 && state.botCooldown <= 0 && player.hpCurrent > 0;
+  if (wantsFire && state.botWinding <= 0) state.botWinding = 0.2;
+
+  if (state.botWinding > 0) {
+    state.botWinding -= dt;
+    robot.setAiming(true);
+    if (state.botWinding <= 0) {
+      robot.setAiming(false);
+      combat.botFire(brain.action.accuracy);
+      state.botAmmo--;
+      state.botCooldown = 0.42 + Math.random() * 0.22;
+      if (state.botAmmo === 0) state.botReload = 1.5;
+    }
+  } else {
+    robot.setAiming(false);
   }
 }
 

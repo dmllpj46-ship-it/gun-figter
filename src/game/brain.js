@@ -223,14 +223,15 @@ export class Brain {
 
     // reload has priority over shooting
     a.reload = r.ammo === 0;
-    // fire: calibrated probability + a geometrical sanity check
-    const aimed = Math.abs(p.aimOffset) < 0.85 && Math.abs(p.aimHeight) < 0.75;
-    const fireScore = j.fire * 0.62 + (j.aim > 0.62 ? 0.18 : 0) + Math.min(1, j.threat / 3) * 0.2;
-    a.fire = !a.reload && state.alive && aimed && fireScore > 0.52;
+    // fire: Jev's judgment plus a threat bonus. The robot tracks the player with
+    // its own gun, so a strict crosshair gate would silence it while it strafes.
+    const fireScore = j.fire * 0.62 + (j.aim > 0.62 ? 0.18 : 0.08) + Math.min(1, j.threat / 3) * 0.2;
+    a.fire = !a.reload && state.alive && fireScore > 0.42;
 
     // accuracy: Jev's threat read plus simple geometry
     let acc = 0.50 + j.threat * 0.075 + (j.aim > 0.7 ? 0.12 : 0);
     acc -= Math.min(0.18, Math.abs(p.vx) * 0.045);
+    acc -= Math.min(0.12, Math.abs(r.vx || 0) * 0.05);
     acc -= state.distance > 11 ? 0.05 : 0;
     if (unsettled) acc -= 0.08;
     a.accuracy = Math.max(0.22, Math.min(0.82, acc));

@@ -23,6 +23,9 @@ export class Robot {
     this.hp = 100;
     this.alive = true;
     this.recoil = 0;
+    this.fireT = 0;
+    this.flashT = 0;
+    this.aiming = false;
     this.hitFlash = 0;
     this.deathT = 0;
     this.lean = 0;
@@ -44,6 +47,7 @@ export class Robot {
     const shell = this._mat(0xd9e7ee, { roughness: 0.34, metalness: 0.72 });
     const dark = this._mat(0x1a2b3a, { roughness: 0.5, metalness: 0.65 });
     const cyan = this._mat(0x58e8ff, { emissive: 0x58e8ff, emissiveIntensity: 2.2, roughness: 0.25 });
+    this.cyanMat = cyan;
     const amber = this._mat(0xffb257, { emissive: 0xffb257, emissiveIntensity: 1.8, roughness: 0.3 });
     this.flashMats = [shell];
     this.baseShellColor = new THREE.Color(0xd9e7ee);
@@ -101,9 +105,9 @@ export class Robot {
       this.arms.push(arm);
     });
 
-    // gun in right hand
+    // gun, held at hand height and pointing toward the player (+z)
     this.gun = new THREE.Group();
-    this.gun.position.set(0.51, 0.72, 0.12);
+    this.gun.position.set(0.51, 1.46, 0.52);
     const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.16, 0.42), dark);
     gunBody.position.z = 0.16; this.gun.add(gunBody);
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.24, 10), dark);
@@ -113,6 +117,13 @@ export class Robot {
     this.muzzle = new THREE.Object3D();
     this.muzzle.position.set(0, 0, 0.6);
     this.gun.add(this.muzzle);
+    this.muzzleFlash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 10, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffc266, toneMapped: false }),
+    );
+    this.muzzleFlash.renderOrder = 10;
+    this.muzzleFlash.position.set(0, 0, 0.95);
+    this.gun.add(this.muzzleFlash);
     this.root.add(this.gun);
 
     // head: big, friendly, glowing eyes
@@ -178,8 +189,13 @@ export class Robot {
   fire() {
     if (!this.alive) return;
     this.recoil = 1;
+    this.fireT = 0.3;
+    this.flashT = 0.16; // long enough to actually be seen at 60fps
     this.mouth.scale.y = 2.2;
   }
+
+  /** Called while the robot is winding up a shot, so the player can read the tell. */
+  setAiming(on) { this.aiming = on; }
 
   hit(damage, zone) {
     if (!this.alive) return;
@@ -199,13 +215,20 @@ export class Robot {
     this.x = 0; this.targetX = 0; this.velocity = 0;
     this.hp = 100; this.alive = true;
     this.recoil = 0; this.hitFlash = 0; this.deathT = 0;
+    this.fireT = 0; this.flashT = 0; this.aiming = false;
     this.lean = 0; this.walkPhase = 0;
     this.root.position.set(0, 0, CONFIG.z);
     this.root.scale.setScalar(CONFIG.scale);
     this.root.rotation.set(0, 0, 0);
     this.headParts.rotation.set(0, 0, 0);
     this.headParts.position.y = 1.82;
+    this.arms.forEach((arm) => arm.rotation.set(-Math.PI / 2 - 0.16, 0, 0));
+    this.gun.rotation.set(0, 0, 0);
+    this.gun.position.set(0.51, 1.46, 0.52);
+    this.aimBlend = 0;
+    this.muzzleFlash.visible = false;
     this.core.material.emissiveIntensity = 2.2;
+    this.cyanMat.emissiveIntensity = 2.2;
     shellReset(this);
   }
 
@@ -220,6 +243,11 @@ export class Robot {
     this.walkPhase += Math.abs(this.velocity) * dt * 5.5;
 
     this.recoil = THREE.MathUtils.damp(this.recoil, 0, 9, dt);
+    this.fireT = Math.max(0, this.fireT - dt);
+    this.flashT = Math.max(0, this.flashT - dt);
+    this.aimBlend = THREE.MathUtils.damp(this.aimBlend || 0, this.aiming ? 1 : 0, 16, dt);
+    const kick = this.fireT / 0.3; // 1 immediately after a shot, decays to 0
+    const aim = this.aimBlend;
     this.hitFlash = THREE.MathUtils.damp(this.hitFlash, 0, 7, dt);
     this.lean = THREE.MathUtils.damp(this.lean, 0, 5, dt);
     this.mouth.scale.y = THREE.MathUtils.damp(this.mouth.scale.y, 1, 8, dt);
@@ -241,6 +269,7 @@ export class Robot {
     this.headParts.position.y = 1.82 + bob;
     this.headParts.rotation.z = Math.sin(t * 1.6) * 0.035 + this.lean;
     this.headParts.rotation.y = THREE.MathUtils.damp(this.headParts.rotation.y, this.aimOffset, 4, dt);
+    this.headParts.rotation.x = -kick * 0.14 + aim * 0.03;
     this.torso.position.y = 1.16 + bob * 0.4;
 
     this.legs.forEach((leg, i) => {
@@ -249,10 +278,19 @@ export class Robot {
     this.arms.forEach((arm, i) => {
       const base = -Math.PI / 2 - 0.16;
       const swing = Math.sin(this.walkPhase + i * Math.PI) * Math.min(0.16, Math.abs(this.velocity) * 0.08);
-      arm.rotation.x = THREE.MathUtils.damp(arm.rotation.x, base + swing + (i === 1 ? this.recoil * 0.5 : 0), 10, dt);
+      // The gun arm snaps back on recoil; both arms settle into an aim pose first.
+      const firePose = i === 1 ? -kick * 0.62 - aim * 0.16 : kick * 0.12 - aim * 0.1;
+      arm.rotation.x = THREE.MathUtils.damp(arm.rotation.x, base + swing + firePose, 18, dt);
+      arm.rotation.z = THREE.MathUtils.damp(arm.rotation.z, i === 1 ? -aim * 0.12 : aim * 0.12, 14, dt);
     });
-    this.gun.rotation.x = -Math.PI / 2 + this.recoil * 0.35;
-    this.gun.position.z = 0.12 - this.recoil * 0.12;
+    this.gun.rotation.x = -kick * 0.45 - aim * 0.05;
+    this.gun.rotation.y = this.aimOffset * 0.6;
+    this.gun.position.z = 0.52 - kick * 0.2;
+    this.gun.position.y = 1.46 + aim * 0.05 - kick * 0.04;
+    this.muzzleFlash.visible = this.flashT > 0;
+    this.muzzleFlash.scale.setScalar(0.85 + Math.random() * 0.45);
+    // Eyes, ears and chest core flare on every shot — readable even at a distance.
+    this.cyanMat.emissiveIntensity = 2.2 + kick * 4.5;
     this.antennaTip.scale.setScalar(1 + Math.sin(t * 5) * 0.18);
 
     // hit flash: whiten the shell
